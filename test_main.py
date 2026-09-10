@@ -109,7 +109,9 @@ def test_delete_history_clears_all_records():
     
     r = client.get("/history")
     assert r.status_code == 200
-    assert r.json()["history"] == []
+    # ตรวจสอบกับ List ว่าง
+    # assert r.json()["history"] == []
+    assert r.json() == []
 
 def test_delete_history_when_already_empty():
     """Case 3: ลบ history เมื่อประวัติว่างเปล่าอยู่แล้ว (ต้องไม่พัง)"""
