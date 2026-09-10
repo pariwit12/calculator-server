@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from asteval import Interpreter
 
 from typing import Optional
+from fastapi import Query
 
 from calculator import expand_percent
 
@@ -28,8 +29,17 @@ aeval = Interpreter(minimal=True, usersyms={"pi": math.pi, "e": math.e})
 
 @app.post("/calculate")
 def calculate(expr: str):
+    if not expr or not expr.strip():
+        return {"ok": False, "expr": "", "error": "Expression cannot be empty"}
     try:
-        code = expand_percent(expr)
+        clean_expr = (
+            expr.strip()
+            .replace("×", "*")
+            .replace("÷", "/")
+            .replace("−", "-")
+        )
+
+        code = expand_percent(clean_expr)
         result = aeval(code)
         if aeval.error:
             msg = "; ".join(str(e.get_error()) for e in aeval.error)
@@ -38,8 +48,12 @@ def calculate(expr: str):
         
         # TODO: Add history
         # บันทึกประวัติการคำนวณเมื่อสำเร็จ
-        record = {"expr": expr, "result": result}
-        history.append(record)
+        now_utc = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        history.append({
+            "timestamp": now_utc,
+            "expr": expr,
+            "result": result
+        })
         
         return {"ok": True, "expr": expr, "result": result, "error": ""}
     except Exception as e:
@@ -47,11 +61,19 @@ def calculate(expr: str):
 
 # TODO GET /hisory
 @app.get("/history")
-def get_history(limit: Optional[int] = None):
+# def get_history(limit: Optional[int] = None):
+#     items = list(history)
+#     if limit is not None and limit >= 0:
+#         items = items[:limit]
+#     return {"ok": True, "history": items}
+def get_history(limit: int = Query(default=50, ge=1)):
+    """
+    คืนค่าประวัติการคำนวณล่าสุดไม่เกิน limit รายการ (Default 50)
+    """
     items = list(history)
-    if limit is not None and limit >= 0:
-        items = items[:limit]
-    return {"ok": True, "history": items}
+    if limit > 0:
+        return items[-limit:]
+    return []
 
 # TODO DELETE /history
 @app.delete("/history")
