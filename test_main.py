@@ -39,6 +39,14 @@ def test_invalid_expr_returns_ok_false():
     assert data["ok"] is False
     assert "error" in data and data["error"] != ""
 
+def test_empty_expr_returns_ok_false():
+    """ทดสอบกรณีส่ง String ว่างเปล่า (อัปเดตตามโค้ดใหม่)"""
+    r = client.post("/calculate", params={"expr": "   "})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["ok"] is False
+    assert data["error"] == "Expression cannot be empty"
+
 # TODO Add more tests
 # --- GET /history Tests (3 Cases) ---
 def test_get_history_empty():
@@ -46,8 +54,9 @@ def test_get_history_empty():
     r = client.get("/history")
     assert r.status_code == 200
     data = r.json()
-    assert data["ok"] is True
-    assert data["history"] == []
+    # โค้ดใหม่คืนค่าเป็น List โดยตรง
+    assert isinstance(data, list)
+    assert data == []
 
 def test_get_history_after_calculations():
     """Case 2: ดึง history หลังจากการคำนวณหลายครั้ง"""
@@ -57,10 +66,12 @@ def test_get_history_after_calculations():
     r = client.get("/history")
     assert r.status_code == 200
     data = r.json()
-    assert data["ok"] is True
-    assert len(data["history"]) == 2
-    assert data["history"][0]["expr"] == "10+5"
-    assert data["history"][1]["expr"] == "4*2"
+    
+    assert isinstance(data, list)
+    assert len(data) == 2
+    assert data[0]["expr"] == "10+5"
+    assert "timestamp" in data[0]  # เช็คว่ามีฟิลด์ timestamp
+    assert data[1]["expr"] == "4*2"
 
 def test_get_history_with_limit_query():
     """Case 3: ดึง history โดยใช้ query parameter 'limit'"""
@@ -68,13 +79,16 @@ def test_get_history_with_limit_query():
     client.post("/calculate", params={"expr": "2+2"})
     client.post("/calculate", params={"expr": "3+3"})
     
+    # ดึงค่า 2 รายการล่าสุด (ตามเงื่อนไข items[-limit:])
     r = client.get("/history", params={"limit": 2})
     assert r.status_code == 200
     data = r.json()
-    assert data["ok"] is True
-    assert len(data["history"]) == 2
-    assert data["history"][0]["expr"] == "1+1"
-    assert data["history"][1]["expr"] == "2+2"
+    
+    assert isinstance(data, list)
+    assert len(data) == 2
+    # ค่าล่าสุด 2 อันต้องเป็น 2+2 และ 3+3 ตามลำดับ
+    assert data[0]["expr"] == "2+2"
+    assert data[1]["expr"] == "3+3"
 
 # --- DELETE /history Tests (3 Cases) ---
 def test_delete_history_success_status():
