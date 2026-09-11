@@ -12,28 +12,33 @@ def clear_history_before_each_test():
     history.clear()
 
 def test_basic_division():
-    r = client.post("/calculate", params={"expr": "30/4"})
+    # r = client.post("/calculate", params={"expr": "30/4"})
+    # เปลี่ยนจากการใช้ params เป็น json เพื่อส่งข้อมูลผ่าน Request Body
+    r = client.post("/calculate", json={"expr": "30/4"})
     assert r.status_code == 200
     data = r.json()
     assert data["ok"] is True
     assert abs(data["result"] - 7.5) < 1e-9
 
 def test_percent_subtraction():
-    r = client.post("/calculate", params={"expr": "100 - 6%"})
+    # r = client.post("/calculate", params={"expr": "100 - 6%"})
+    r = client.post("/calculate", json={"expr": "100 - 6%"})
     assert r.status_code == 200
     data = r.json()
     assert data["ok"] is True
     assert abs(data["result"] - 94.0) < 1e-9
 
 def test_standalone_percent():
-    r = client.post("/calculate", params={"expr": "6%"})
+    # r = client.post("/calculate", params={"expr": "6%"})
+    r = client.post("/calculate", json={"expr": "6%"})
     assert r.status_code == 200
     data = r.json()
     assert data["ok"] is True
     assert abs(data["result"] - 0.06) < 1e-9
 
 def test_invalid_expr_returns_ok_false():
-    r = client.post("/calculate", params={"expr": "2**(3"})
+    # r = client.post("/calculate", params={"expr": "2**(3"})
+    r = client.post("/calculate", json={"expr": "2**(3"})
     assert r.status_code == 200
     data = r.json()
     assert data["ok"] is False
@@ -41,7 +46,8 @@ def test_invalid_expr_returns_ok_false():
 
 def test_empty_expr_returns_ok_false():
     """ทดสอบกรณีส่ง String ว่างเปล่า (อัปเดตตามโค้ดใหม่)"""
-    r = client.post("/calculate", params={"expr": "   "})
+    # r = client.post("/calculate", params={"expr": "   "})
+    r = client.post("/calculate", json={"expr": "   "})
     assert r.status_code == 200
     data = r.json()
     assert data["ok"] is False
@@ -60,8 +66,10 @@ def test_get_history_empty():
 
 def test_get_history_after_calculations():
     """Case 2: ดึง history หลังจากการคำนวณหลายครั้ง"""
-    client.post("/calculate", params={"expr": "10+5"})
-    client.post("/calculate", params={"expr": "4*2"})
+    # client.post("/calculate", params={"expr": "10+5"})
+    # client.post("/calculate", params={"expr": "4*2"})
+    client.post("/calculate", json={"expr": "10+5"})
+    client.post("/calculate", json={"expr": "4*2"})
     
     r = client.get("/history")
     assert r.status_code == 200
@@ -75,11 +83,15 @@ def test_get_history_after_calculations():
 
 def test_get_history_with_limit_query():
     """Case 3: ดึง history โดยใช้ query parameter 'limit'"""
-    client.post("/calculate", params={"expr": "1+1"})
-    client.post("/calculate", params={"expr": "2+2"})
-    client.post("/calculate", params={"expr": "3+3"})
+    # client.post("/calculate", params={"expr": "1+1"})
+    # client.post("/calculate", params={"expr": "2+2"})
+    # client.post("/calculate", params={"expr": "3+3"})
+    client.post("/calculate", json={"expr": "1+1"})
+    client.post("/calculate", json={"expr": "2+2"})
+    client.post("/calculate", json={"expr": "3+3"})
     
     # ดึงค่า 2 รายการล่าสุด (ตามเงื่อนไข items[-limit:])
+    # ดึงค่า 2 รายการล่าสุด (limit ยังคงเป็น Query Parameter เหมือนเดิม)
     r = client.get("/history", params={"limit": 2})
     assert r.status_code == 200
     data = r.json()
@@ -93,7 +105,8 @@ def test_get_history_with_limit_query():
 # --- DELETE /history Tests (3 Cases) ---
 def test_delete_history_success_status():
     """Case 1: ลบ history และตรวจสอบ status code กับ response"""
-    client.post("/calculate", params={"expr": "5+5"})
+    # client.post("/calculate", params={"expr": "5+5"})
+    client.post("/calculate", json={"expr": "5+5"})
     r = client.delete("/history")
     assert r.status_code == 200
     data = r.json()
@@ -102,8 +115,10 @@ def test_delete_history_success_status():
 
 def test_delete_history_clears_all_records():
     """Case 2: ตรวจสอบว่าหลังจาก DELETE แล้ว ข้อมูลใน GET /history ว่างเปล่าจริง"""
-    client.post("/calculate", params={"expr": "100/2"})
-    client.post("/calculate", params={"expr": "50-10"})
+    # client.post("/calculate", params={"expr": "100/2"})
+    # client.post("/calculate", params={"expr": "50-10"})
+    client.post("/calculate", json={"expr": "100/2"})
+    client.post("/calculate", json={"expr": "50-10"})
     
     client.delete("/history")
     

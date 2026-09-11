@@ -5,8 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from asteval import Interpreter
 
-from typing import Optional
+from typing import Optional, List
 from fastapi import Query
+
+from models import Expression, CalculatorLog
 
 from calculator import expand_percent
 
@@ -28,7 +30,8 @@ aeval = Interpreter(minimal=True, usersyms={"pi": math.pi, "e": math.e})
 
 
 @app.post("/calculate")
-def calculate(expr: str):
+def calculate(req: Expression):  # <--- เปลี่ยนมารับ Request Body ด้วยคลาส Expression
+    expr = req.expr
     if not expr or not expr.strip():
         return {"ok": False, "expr": "", "error": "Expression cannot be empty"}
     try:
@@ -40,6 +43,10 @@ def calculate(expr: str):
         )
 
         code = expand_percent(clean_expr)
+
+        # # ใช้ Method จาก Pydantic Model เพื่อแปลง % แทนฟังก์ชันเดิม
+        # code = req.expand_percent()
+
         result = aeval(code)
         if aeval.error:
             msg = "; ".join(str(e.get_error()) for e in aeval.error)
@@ -60,13 +67,14 @@ def calculate(expr: str):
         return {"ok": False, "expr": expr, "error": str(e)}
 
 # TODO GET /hisory
+# กำหนด response_model ให้เป็น list ของ CalculatorLog
 @app.get("/history")
 # def get_history(limit: Optional[int] = None):
 #     items = list(history)
 #     if limit is not None and limit >= 0:
 #         items = items[:limit]
 #     return {"ok": True, "history": items}
-def get_history(limit: int = Query(default=50, ge=1)):
+def get_history(limit: int = Query(default=50, ge=1)) -> list[CalculatorLog]:
     """
     คืนค่าประวัติการคำนวณล่าสุดไม่เกิน limit รายการ (Default 50)
     """
